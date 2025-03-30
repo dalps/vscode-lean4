@@ -1,5 +1,5 @@
 import * as React from 'react'
-import type { Diagnostic, Location } from 'vscode-languageserver-protocol'
+import type { Location } from 'vscode-languageserver-protocol'
 
 import {
     getInteractiveDiagnostics,
@@ -147,10 +147,20 @@ interface GoalInfoDisplayProps {
 
 function GoalInfoDisplay(props: GoalInfoDisplayProps) {
     const { pos, goals, termGoal, userWidgets } = props
+    const ec = React.useContext(EditorContext)
 
     const config = React.useContext(ConfigContext)
 
     const [selectedLocs, setSelectedLocs] = React.useState<GoalsLocation[]>([])
+    const selectedLocationsId = React.useId()
+    useEvent(
+        ec.events.clickedContextMenu,
+        _ => {
+            setSelectedLocs([])
+        },
+        [setSelectedLocs],
+        `unselectAll:${selectedLocationsId}`,
+    )
 
     // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
     const [prevPos, setPrevPos] = React.useState<DocumentPosition>(pos)
@@ -180,7 +190,9 @@ function GoalInfoDisplay(props: GoalInfoDisplayProps) {
     return (
         <>
             <LocationsContext.Provider value={locs}>
-                <FilteredGoals key="goals" headerChildren="Tactic state" initiallyOpen goals={goals} displayCount />
+                <span data-vscode-context={JSON.stringify({ selectedLocationsId })}>
+                    <FilteredGoals key="goals" headerChildren="Tactic state" initiallyOpen goals={goals} displayCount />
+                </span>
             </LocationsContext.Provider>
             <FilteredGoals
                 key="term-goal"
@@ -403,13 +415,13 @@ function InfoAux(props: InfoProps) {
     // Compute the LSP diagnostics at this info's position. We try to ensure that if these remain
     // the same, then so does the identity of `lspDiagsHere` so that it can be used as a dep.
     const lspDiags = React.useContext(LspDiagnosticsContext)
-    const [lspDiagsHere, setLspDiagsHere] = React.useState<Diagnostic[]>([])
+    const [lspDiagsHere, setLspDiagsHere] = React.useState<LeanDiagnostic[]>([])
     React.useEffect(() => {
         // Note: the curly braces are important. https://medium.com/geekculture/react-uncaught-typeerror-destroy-is-not-a-function-192738a6e79b
         setLspDiagsHere(diags0 => {
-            const diagPred = (d: Diagnostic) =>
+            const diagPred = (d: LeanDiagnostic) =>
                 RangeHelpers.contains(
-                    (d as LeanDiagnostic).fullRange || d.range,
+                    d.fullRange || d.range,
                     { line: pos.line, character: pos.character },
                     config.allErrorsOnLine,
                 )
@@ -498,6 +510,8 @@ function InfoAux(props: InfoProps) {
                             errorString = mapRpcError(ex).message
                         } else if (ex instanceof Error) {
                             errorString = ex.toString()
+                        } else if ('message' in ex && typeof ex.message === 'string') {
+                            errorString = ex.message
                         } else {
                             errorString = `Unrecognized error: ${JSON.stringify(ex)}`
                         }

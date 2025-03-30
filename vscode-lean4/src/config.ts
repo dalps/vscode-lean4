@@ -1,8 +1,13 @@
-import { workspace } from 'vscode'
+import { ConfigurationTarget, ThemeColor, workspace } from 'vscode'
+import { elanStableChannel } from './utils/elan'
 import { PATH } from './utils/envPath'
 
-// TODO: does currently not contain config options for `./abbreviation`
-// so that it is easy to keep it in sync with vscode-lean.
+function processConfigColor(c: string): ThemeColor | string {
+    if (c.match(/^(#|rgb\(|rgba\(|hsl\(|hsla\()/)) {
+        return c
+    }
+    return new ThemeColor(c)
+}
 
 export function getPowerShellPath(): string {
     const windir = process.env.windir
@@ -15,6 +20,20 @@ export function automaticallyBuildDependencies(): boolean {
 
 export function envPathExtensions(): PATH {
     return new PATH(workspace.getConfiguration('lean4').get('envPathExtensions', []))
+}
+
+export function alwaysAskBeforeInstallingLeanVersions(): boolean {
+    return workspace.getConfiguration('lean4').get('alwaysAskBeforeInstallingLeanVersions', false)
+}
+
+export async function setAlwaysAskBeforeInstallingLeanVersions(alwaysAskBeforeInstallingLeanVersions: boolean) {
+    await workspace
+        .getConfiguration('lean4')
+        .update(
+            'alwaysAskBeforeInstallingLeanVersions',
+            alwaysAskBeforeInstallingLeanVersions,
+            ConfigurationTarget.Global,
+        )
 }
 
 export function serverArgs(): string[] {
@@ -94,6 +113,34 @@ export function getFallBackToStringOccurrenceHighlighting(): boolean {
     return workspace.getConfiguration('lean4').get('fallBackToStringOccurrenceHighlighting', false)
 }
 
+export function showDiagnosticGutterDecorations(): boolean {
+    return workspace.getConfiguration('lean4').get('showDiagnosticGutterDecorations', true)
+}
+
+export function showUnsolvedGoalsDecoration(): boolean {
+    return workspace.getConfiguration('lean4').get('showUnsolvedGoalsDecoration', true)
+}
+
+export function unsolvedGoalsDecorationLightThemeColor(): ThemeColor | string {
+    return processConfigColor(
+        workspace.getConfiguration('lean4').get('unsolvedGoalsDecorationLightThemeColor', 'editorInfo.foreground'),
+    )
+}
+
+export function unsolvedGoalsDecorationDarkThemeColor(): ThemeColor | string {
+    return processConfigColor(
+        workspace.getConfiguration('lean4').get('unsolvedGoalsDecorationDarkThemeColor', 'editorInfo.foreground'),
+    )
+}
+
+export function goalsAccomplishedDecorationKind(): string {
+    return workspace.getConfiguration('lean4').get('goalsAccomplishedDecorationKind', 'Double Checkmark')
+}
+
+export function decorationEditDelay(): number {
+    return workspace.getConfiguration('lean4').get('decorationEditDelay', 750)
+}
+
 export function isRunningTest(): boolean {
     return typeof process.env.LEAN4_TEST_FOLDER === 'string'
 }
@@ -105,7 +152,7 @@ export function getTestFolder(): string {
 export function getDefaultLeanVersion(): string {
     return typeof process.env.DEFAULT_LEAN_TOOLCHAIN === 'string'
         ? process.env.DEFAULT_LEAN_TOOLCHAIN
-        : 'leanprover/lean4:stable'
+        : elanStableChannel
 }
 
 /** The editor line height, in pixels. */

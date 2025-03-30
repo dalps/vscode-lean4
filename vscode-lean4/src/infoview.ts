@@ -26,7 +26,6 @@ import {
     window,
     workspace,
 } from 'vscode'
-import { PublishDiagnosticsParams } from 'vscode-languageclient'
 import * as ls from 'vscode-languageserver-protocol'
 import {
     getEditorLineHeight,
@@ -46,7 +45,7 @@ import {
 import { LeanClient } from './leanclient'
 import { Rpc } from './rpc'
 import { LeanClientProvider } from './utils/clientProvider'
-import { c2pConverter, p2cConverter } from './utils/converters'
+import { c2pConverter, LeanPublishDiagnosticsParams, p2cConverter } from './utils/converters'
 import { ExtUri, parseExtUri, toExtUri } from './utils/exturi'
 import { lean, LeanEditor } from './utils/leanEditorProvider'
 import { logger } from './utils/logger'
@@ -142,7 +141,7 @@ export class InfoProvider implements Disposable {
         sendClientRequest: async (uri: string, method: string, params: any): Promise<any> => {
             const extUri = parseExtUri(uri)
             if (extUri === undefined) {
-                return undefined
+                throw Error(`Unexpected URI scheme: ${Uri.parse(uri).scheme}`)
             }
 
             const client = this.clientProvider.findClient(extUri)
@@ -162,7 +161,7 @@ export class InfoProvider implements Disposable {
                     throw ex
                 }
             }
-            return undefined
+            throw Error('No active Lean client.')
         },
         sendClientNotification: async (uri: string, method: string, params: any): Promise<void> => {
             const extUri = parseExtUri(uri)
@@ -292,15 +291,17 @@ export class InfoProvider implements Disposable {
         createRpcSession: async uri => {
             const extUri = parseExtUri(uri)
             if (extUri === undefined) {
-                return ''
+                throw Error(`Unexpected URI scheme: ${Uri.parse(uri).scheme}`)
             }
             const client = this.clientProvider.findClient(extUri)
-            if (!client) return ''
+            if (client === undefined) {
+                throw Error('No active Lean client.')
+            }
             const sessionId = await rpcConnect(client, uri)
             const session = new RpcSessionAtPos(client, sessionId, uri)
             if (!this.webviewPanel) {
                 session.dispose()
-                throw Error('infoview disconnect while connecting to RPC session')
+                throw Error('InfoView disconnected while connecting to RPC session.')
             } else {
                 this.rpcSessions.set(sessionId, session)
                 return sessionId
@@ -363,7 +364,16 @@ export class InfoProvider implements Disposable {
                 this.webviewPanel?.api.requestedAction({ kind: 'togglePin' }),
             ),
             commands.registerCommand('lean4.infoview.goToDefinition', args =>
-                this.webviewPanel?.api.goToDefinition(args.interactiveCodeTagId),
+                this.webviewPanel?.api.clickedContextMenu({ entry: 'goToDefinition', id: args.interactiveCodeTagId }),
+            ),
+            commands.registerCommand('lean4.infoview.select', args =>
+                this.webviewPanel?.api.clickedContextMenu({ entry: 'select', id: args.selectableLocationId }),
+            ),
+            commands.registerCommand('lean4.infoview.unselect', args =>
+                this.webviewPanel?.api.clickedContextMenu({ entry: 'unselect', id: args.unselectableLocationId }),
+            ),
+            commands.registerCommand('lean4.infoview.unselectAll', args =>
+                this.webviewPanel?.api.clickedContextMenu({ entry: 'unselectAll', id: args.selectedLocationsId }),
             ),
         )
     }
@@ -481,6 +491,7 @@ export class InfoProvider implements Disposable {
         // active client is changing.
         this.clearNotificationHandlers()
         this.clearRpcSessions(null)
+        this.webviewPanel?.dispose()
         for (const s of this.clientSubscriptions) {
             s.dispose()
         }
@@ -669,8 +680,8 @@ export class InfoProvider implements Disposable {
     private static async getDiagnosticParams(
         uri: Uri,
         diagnostics: readonly Diagnostic[],
-    ): Promise<PublishDiagnosticsParams> {
-        const params: PublishDiagnosticsParams = {
+    ): Promise<LeanPublishDiagnosticsParams> {
+        const params: LeanPublishDiagnosticsParams = {
             uri: c2pConverter.asUri(uri),
             diagnostics: await c2pConverter.asDiagnostics(diagnostics as Diagnostic[]),
         }

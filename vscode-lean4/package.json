@@ -2,7 +2,7 @@
     "name": "lean4",
     "displayName": "Lean 4",
     "description": "Lean 4 language support for VS Code",
-    "version": "0.0.186",
+    "version": "0.0.201",
     "publisher": "leanprover",
     "engines": {
         "vscode": "^1.75.0"
@@ -81,6 +81,11 @@
                         "description": "Entry to add to the PATH variable"
                     }
                 },
+                "lean4.alwaysAskBeforeInstallingLeanVersions": {
+                    "type": "boolean",
+                    "default": false,
+                    "markdownDescription": "Enable to display a confirmation prompt whenever Elan is about to download and install a new Lean version. Needs Elan >= 4.0.0."
+                },
                 "lean4.serverArgs": {
                     "type": "array",
                     "default": [],
@@ -89,6 +94,17 @@
                         "type": "string",
                         "description": "an argument to pass to the server"
                     }
+                },
+                "lean4.trace.server": {
+                    "type": "string",
+                    "default": "off",
+                    "enum": [
+                        "off",
+                        "messages",
+                        "compact",
+                        "verbose"
+                    ],
+                    "markdownDescription": "Whether to enable client-side logging for language server messages."
                 },
                 "lean4.serverLogging.enabled": {
                     "type": "boolean",
@@ -170,6 +186,43 @@
                     "type": "boolean",
                     "default": true,
                     "markdownDescription": "Always display the Lean extension title bar menu in the top right. This helps beginners create and open Lean projects after launching an empty instance of VS Code, but may not be desirable for anyone who uses VS Code for things other than Lean."
+                },
+                "lean4.showDiagnosticGutterDecorations": {
+                    "type": "boolean",
+                    "default": true,
+                    "markdownDescription": "Display icons for errors and warnings and error ranges in the gutter."
+                },
+                "lean4.showUnsolvedGoalsDecoration": {
+                    "type": "boolean",
+                    "default": true,
+                    "markdownDescription": "Display an icon at the end of the line where an 'unsolved goals' error ends."
+                },
+                "lean4.unsolvedGoalsDecorationLightThemeColor": {
+                    "type": "string",
+                    "default": "editorInfo.foreground",
+                    "markdownDescription": "Color used in unsolved goal decorations when using a light theme. Can either denote a CSS color or a [VS Code theme color](https://code.visualstudio.com/api/references/theme-color)."
+                },
+                "lean4.unsolvedGoalsDecorationDarkThemeColor": {
+                    "type": "string",
+                    "default": "editorInfo.foreground",
+                    "markdownDescription": "Color used in unsolved goal decorations when using a dark theme. Can either denote a CSS color or a [VS Code theme color](https://code.visualstudio.com/api/references/theme-color)."
+                },
+                "lean4.goalsAccomplishedDecorationKind": {
+                    "type": "string",
+                    "enum": [
+                        "Off",
+                        "Double Checkmark",
+                        "Circled Checkmark",
+                        "Octopus",
+                        "Tada"
+                    ],
+                    "default": "Double Checkmark",
+                    "markdownDescription": "Style of icon used in 'Goals accomplished' decoration."
+                },
+                "lean4.decorationEditDelay": {
+                    "type": "number",
+                    "default": 750,
+                    "markdownDescription": "Delay after an edit in milliseconds until certain editor decorations (like the 'unsolved goals' decoration) update."
                 }
             }
         },
@@ -267,6 +320,24 @@
                 "description": "This command is an implementation detail of the 'Go to Definition' context menu option in the infoview."
             },
             {
+                "command": "lean4.infoview.select",
+                "category": "Lean 4",
+                "title": "Select",
+                "description": "This command is an implementation detail of the 'Select' context menu option in the infoview."
+            },
+            {
+                "command": "lean4.infoview.unselect",
+                "category": "Lean 4",
+                "title": "Unselect",
+                "description": "This command is an implementation detail of the 'Unselect' context menu option in the infoview."
+            },
+            {
+                "command": "lean4.infoview.unselectAll",
+                "category": "Lean 4",
+                "title": "Unselect All",
+                "description": "This command is an implementation detail of the 'Unselect All' context menu option in the infoview."
+            },
+            {
                 "command": "lean4.loogle.search",
                 "category": "Lean 4",
                 "title": "Loogle: Search",
@@ -321,6 +392,36 @@
                 "description": "Install Lean's version manager 'Elan'"
             },
             {
+                "command": "lean4.setup.updateElan",
+                "category": "Lean 4",
+                "title": "Setup: Update Elan",
+                "description": "Update Lean's version manager 'Elan' to the most recent version"
+            },
+            {
+                "command": "lean4.setup.uninstallElan",
+                "category": "Lean 4",
+                "title": "Setup: Uninstall Elan",
+                "description": "Uninstall Lean's version manager 'Elan' and all installed Lean versions"
+            },
+            {
+                "command": "lean4.setup.selectDefaultToolchain",
+                "category": "Lean 4",
+                "title": "Setup: Select Default Lean Version…",
+                "description": "Sets a given Lean version to be the default for non-project files and command-line operations outside of projects"
+            },
+            {
+                "command": "lean4.setup.updateReleaseChannel",
+                "category": "Lean 4",
+                "title": "Setup: Update Release Channel Lean Version…",
+                "description": "Updates the Lean version for a given release channel"
+            },
+            {
+                "command": "lean4.setup.uninstallToolchains",
+                "category": "Lean 4",
+                "title": "Setup: Uninstall Lean Versions…",
+                "description": "Uninstalls given Lean versions"
+            },
+            {
                 "command": "lean4.project.createStandaloneProject",
                 "category": "Lean 4",
                 "title": "Project: Create Standalone Project…",
@@ -373,6 +474,12 @@
                 "category": "Lean 4",
                 "title": "Project: Fetch Mathlib Build Cache For Current Imports",
                 "description": "Downloads cached Mathlib build artifacts of the focused file and all of its imports to avoid full elaboration"
+            },
+            {
+                "command": "lean4.project.selectProjectToolchain",
+                "category": "Lean 4",
+                "title": "Project: Select Project Lean Version…",
+                "description": "Updates the 'lean-toolchain' file of the currently focused project with a given Lean version"
             }
         ],
         "languages": [
@@ -557,6 +664,18 @@
                     "when": "false"
                 },
                 {
+                    "command": "lean4.infoview.select",
+                    "when": "false"
+                },
+                {
+                    "command": "lean4.infoview.unselect",
+                    "when": "false"
+                },
+                {
+                    "command": "lean4.infoview.unselectAll",
+                    "when": "false"
+                },
+                {
                     "command": "lean4.loogle.search"
                 },
                 {
@@ -582,6 +701,21 @@
                 },
                 {
                     "command": "lean4.setup.installElan"
+                },
+                {
+                    "command": "lean4.setup.updateElan"
+                },
+                {
+                    "command": "lean4.setup.uninstallElan"
+                },
+                {
+                    "command": "lean4.setup.selectDefaultToolchain"
+                },
+                {
+                    "command": "lean4.setup.updateReleaseChannel"
+                },
+                {
+                    "command": "lean4.setup.uninstallToolchains"
                 },
                 {
                     "command": "lean4.project.createStandaloneProject"
@@ -613,6 +747,10 @@
                 },
                 {
                     "command": "lean4.project.fetchFileCache",
+                    "when": "lean4.isLeanFeatureSetActive"
+                },
+                {
+                    "command": "lean4.project.selectProjectToolchain",
                     "when": "lean4.isLeanFeatureSetActive"
                 }
             ],
@@ -716,9 +854,34 @@
             ],
             "lean4.titlebar.versions": [
                 {
+                    "command": "lean4.setup.selectDefaultToolchain",
+                    "when": "config.lean4.alwaysShowTitleBarMenu || lean4.isLeanFeatureSetActive",
+                    "group": "1_toolchains@1"
+                },
+                {
+                    "command": "lean4.setup.updateReleaseChannel",
+                    "when": "config.lean4.alwaysShowTitleBarMenu || lean4.isLeanFeatureSetActive",
+                    "group": "1_toolchains@2"
+                },
+                {
+                    "command": "lean4.setup.uninstallToolchains",
+                    "when": "config.lean4.alwaysShowTitleBarMenu || lean4.isLeanFeatureSetActive",
+                    "group": "1_toolchains@3"
+                },
+                {
                     "command": "lean4.setup.installElan",
                     "when": "config.lean4.alwaysShowTitleBarMenu || lean4.isLeanFeatureSetActive",
-                    "group": "1_setup@1"
+                    "group": "2_elan@1"
+                },
+                {
+                    "command": "lean4.setup.updateElan",
+                    "when": "config.lean4.alwaysShowTitleBarMenu || lean4.isLeanFeatureSetActive",
+                    "group": "2_elan@2"
+                },
+                {
+                    "command": "lean4.setup.uninstallElan",
+                    "when": "config.lean4.alwaysShowTitleBarMenu || lean4.isLeanFeatureSetActive",
+                    "group": "2_elan@3"
                 }
             ],
             "lean4.titlebar.projectActions": [
@@ -746,6 +909,11 @@
                     "command": "lean4.project.fetchFileCache",
                     "when": "lean4.isLeanFeatureSetActive",
                     "group": "2_mathlibActions@2"
+                },
+                {
+                    "command": "lean4.project.selectProjectToolchain",
+                    "when": "lean4.isLeanFeatureSetActive",
+                    "group": "3_projectToolchains@1"
                 }
             ],
             "lean4.titlebar.documentation": [
@@ -786,6 +954,18 @@
                 {
                     "command": "lean4.infoview.goToDefinition",
                     "when": "webviewId == 'lean4_infoview' && interactiveCodeTagId"
+                },
+                {
+                    "command": "lean4.infoview.select",
+                    "when": "webviewId == 'lean4_infoview' && selectableLocationId"
+                },
+                {
+                    "command": "lean4.infoview.unselect",
+                    "when": "webviewId == 'lean4_infoview' && unselectableLocationId"
+                },
+                {
+                    "command": "lean4.infoview.unselectAll",
+                    "when": "webviewId == 'lean4_infoview' && selectedLocationsId"
                 }
             ]
         },
@@ -949,10 +1129,10 @@
         "test": "node ./out/test/suite/runTest.js"
     },
     "dependencies": {
-        "@leanprover/infoview": "~0.7.0",
-        "@leanprover/infoview-api": "~0.4.0",
-        "@leanprover/unicode-input": "~0.1.0",
-        "@leanprover/unicode-input-component": "~0.1.0",
+        "@leanprover/infoview": "~0.8.3",
+        "@leanprover/infoview-api": "~0.6.0",
+        "@leanprover/unicode-input": "~0.1.3",
+        "@leanprover/unicode-input-component": "~0.1.3",
         "@vscode/codicons": "^0.0.36",
         "@vscode-elements/elements": "^1.7.1",
         "markdown-it": "^14.1.0",
@@ -962,7 +1142,6 @@
         "zod": "^3.22.4"
     },
     "devDependencies": {
-        "@types/glob": "^8.1.0",
         "@types/markdown-it": "^14.1.1",
         "@types/mocha": "^10.0.6",
         "@types/node": "^20.12.12",
@@ -973,14 +1152,14 @@
         "@vscode/vsce": "^2.21.1",
         "concurrently": "^8.2.2",
         "copy-webpack-plugin": "^12.0.2",
-        "glob": "^10.3.16",
         "mocha": "^10.3.0",
         "ovsx": "^0.9.1",
         "source-map-loader": "^5.0.0",
         "ts-loader": "^9.5.1",
         "typescript": "^5.4.5",
         "webpack": "^5.90.3",
-        "webpack-cli": "^5.1.4"
+        "webpack-cli": "^5.1.4",
+        "glob": "^10.4.5"
     },
     "icon": "images/lean_logo.png",
     "license": "Apache-2.0",
